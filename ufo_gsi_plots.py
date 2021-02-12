@@ -219,7 +219,7 @@ def read_var(datapath):
     gsi_qc_flag = []
     gsi_error = []
     
-    for file in obsfiles[:-1]:
+    for file in obsfiles:
         try:
             channels = _get_channels(file)
             
