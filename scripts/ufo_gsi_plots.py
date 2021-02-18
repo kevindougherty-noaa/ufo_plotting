@@ -1,9 +1,11 @@
-import numpy as np
-import glob as glob
-from netCDF4 import Dataset
-import os
 import argparse
+import xarray as xr
+import numpy as np
+import pandas as pd
+from netCDF4 import Dataset
 import matplotlib.pyplot as plt
+import glob
+import os
 from sklearn.linear_model import LinearRegression
 
 def _get_linear_regression(data1, data2):
@@ -37,65 +39,33 @@ def _get_channels(file):
         
     return channels
 
-
-def plot_hofx_scatter(ufo_data, gsi_data,
-                      metadata,
-                      ufo_data_qc=None,
-                      gsi_data_qc=None):
-
-    # Create Figure
+def plot_scatter(df, metadata):
+    
+    ## Scatter Plot ##
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111)
-    
-    extend_ufo = []
-    extend_gsi = []
-    extend_ufo_qc = []
-    extend_gsi_qc = []
-    
-    for i in range(len(metadata['channels'])-1):
-        
-        plt.scatter(ufo_data[i], gsi_data[i], s=15, color='darkgrey')#, label=f'All Data (n: {len(ufo_data[i])})')
 
-        try:
-            plt.scatter(ufo_data_qc[i], gsi_data_qc[i], s=15, color='dimgrey')#, label=f'QC=0 Data (n: {len(ufo_data_qc)})')
-        except:
-            pass
-        
-        extend_ufo.extend(ufo_data[i])
-        extend_gsi.extend(gsi_data[i])
-        extend_ufo_qc.extend(ufo_data_qc[i])
-        extend_gsi_qc.extend(gsi_data_qc[i])
-        
-    extend_ufo.extend(ufo_data[-1])
-    extend_gsi.extend(gsi_data[-1])
-    extend_ufo_qc.extend(ufo_data_qc[-1])
-    extend_gsi_qc.extend(gsi_data_qc[-1])
-    
-    plt.scatter(ufo_data[-1], gsi_data[-1], s=15, color='darkgrey', label=f'All Data (n: {len(extend_ufo)})')
-    try:
-        plt.scatter(ufo_data_qc[-1], gsi_data_qc[-1], s=15, color='dimgrey', label=f'QC=0 Data (n: {len(extend_ufo_qc)})')
-    except:
-        pass    
-        
+    plt.scatter(df['ufo'], df['gsi'], s=15, color='darkgray', label='All Data')
+    plt.scatter(df['qc_ufo'], df['qc_gsi'], s=15, color='dimgrey', label='QC Data')
 
     # Plot Regression line
-    y_pred, r_sq, intercept, slope = _get_linear_regression(extend_ufo, extend_gsi)
+    y_pred, r_sq, intercept, slope = _get_linear_regression(df['ufo'], df['gsi'])
     label = f'Estimated Regression line\ny = {slope:.4f}x + {intercept:.4f}\nR\u00b2 : {r_sq:.4f}'
-    plt.plot(extend_ufo, y_pred, color='blue', linewidth=1, label=label)
+    plt.plot(df['ufo'], y_pred, color='blue', linewidth=1, label=label)
 
     # Plot QC data Regression line
-    y_pred, r_sq, intercept, slope = _get_linear_regression(extend_ufo_qc, extend_gsi_qc)
+    y_pred, r_sq, intercept, slope = _get_linear_regression(df['qc_ufo'].dropna(),
+                                                            df['qc_gsi'].dropna())
     label = f'Estimated Regression line - QC\ny = {slope:.4f}x + {intercept:.4f}\nR\u00b2 : {r_sq:.4f}'
-    plt.plot(extend_ufo_qc, y_pred, color='red', linewidth=1, label=label)
-    
-    
+    plt.plot(df['qc_ufo'].dropna(), y_pred, color='red', linewidth=1, label=label)
+
     plt.legend(loc='upper left', fontsize=11)
-    
+
     plt.grid(linewidth=0.5, color='gray', linestyle='--')
     plt.title('{sensor} {satellite} - H(x)\nAll Channels'.format(**metadata),
               loc='left', fontsize=12)
     plt.title('{cycle}'.format(**metadata), loc='right', fontweight='semibold')
-    
+
     plt.xlabel('UFO H(x)', fontsize=12)
     plt.ylabel('GSI H(x)', fontsize=12)
     
@@ -106,41 +76,29 @@ def plot_hofx_scatter(ufo_data, gsi_data,
 
     return
 
+def plot_histogram(df, metadata):
+    ## Histogram ##
 
-def plot_hofx_histogram(ufo_data, gsi_data,
-                      metadata,
-                      ufo_data_qc=None,
-                      gsi_data_qc=None):
-    
-    hist_data = []
-    for i in range(len(metadata['channels'])):
-        data = ufo_data[i] - gsi_data[i]
-        hist_data.extend(data)
-    
-    #stats
-    n = len(hist_data)
-    mean = np.mean(hist_data)
-    mn = np.min(hist_data)
-    mx = np.max(hist_data)
-    std = np.std(hist_data)
-    
     # Create Figure
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111)
-    
-    binsize=0.05
-    bins=np.arange(0-4*0.5, 0+4*0.5, binsize)
-    
-    plt.hist(hist_data, bins=bins)
-    
-    text = f'n: {n}\nmean: {mean:.3f}\nmin: {mn:.3f}\nmax: {mx:.3f}\nstd. dev: {std:.3f}'
+
+    stats = df['ufo-gsi'].describe()
+
+    df['ufo-gsi'].plot.hist(ax=ax, bins=9)
+
+    # Plots data mean with red line
+    ax.axvline(stats[1], color='r',
+                linestyle='solid', linewidth=1)
+
+    text = f'n: {int(stats[0])}\nmean: {stats[1]:.3e}\nmin: {stats[3]:.3e}\nmax: {stats[-1]:.3e}\nstd. dev: {stats[2]:.3e}'
     ax.text(0.04, 0.74, text, fontsize=12,
-            bbox=dict(boxstyle="round,pad=.5",
-                      facecolor="white",
-                      edgecolor="grey",
-                      linewidth=.75),
-           transform=ax.transAxes)
-    
+                bbox=dict(boxstyle="round,pad=.5",
+                          facecolor="white",
+                          edgecolor="grey",
+                          linewidth=.75),
+               transform=ax.transAxes)
+
     plt.grid(linewidth=0.5, color='gray', linestyle='--')
     plt.title('{sensor} {satellite} - H(x)\nAll Channels'.format(**metadata),
               loc='left', fontsize=12)
@@ -154,7 +112,6 @@ def plot_hofx_histogram(ufo_data, gsi_data,
     plt.close('all')
     
     return
-
 
 def plot_obs_count(ufo_data, ufo_qc_data,
                    gsi_data, gsi_qc_data,
@@ -187,142 +144,85 @@ def plot_obs_count(ufo_data, ufo_qc_data,
     plt.close('all')    
     
     return
-
-
-def read_var(datapath):
-    obsfiles = glob.glob(datapath+'*')
-    obsfiles.sort()
     
-    lats = []
-    lons = []
-    filenames = []
-    cycles = []
-    ufo_hofx = []
-    ufo_hofx_qc = []
-    gsi_hofx = []
-    gsi_hofx_qc = []
+
+def get_data_df(file, channels):
     
-    for file in obsfiles:
-        try:
-            channels = _get_channels(file)
+    ds = xr.open_dataset(file)
+    df = ds.to_dataframe()
 
-            filename = file.split('/')[-1]
-            filenames.append(filename)
-            cycle = filename.split('_')[3]
-            cycles.append(cycle)
+    #Get Column names by looping through channels
+    columns = []
 
-            ufo_hofx_tmp = []
-            ufo_hofx_qc_tmp = []
-            gsi_hofx_tmp = []
-            gsi_hofx_qc_tmp = []
-
-            with Dataset(file, mode='r') as f:
-                lattmp = f.variables['latitude@MetaData'][:]
-                lontmp = f.variables['longitude@MetaData'][:]
-
-                for channel in channels:
-                    ufo_hofx_chan = f.variables[f'brightness_temperature_{channel}@hofx'][:]
-                    ufo_qc_flag_chan = f.variables[f'brightness_temperature_{channel}@EffectiveQC'][:]
-                    ufo_obs_bias_chan = f.variables[f'brightness_temperature_{channel}@ObsBias'][:]
-
-                    ### COMMENT THIS LINE OUT IF DATA HAS BIAS CORRECTION INCLUDED ###
-                    ufo_hofx_chan = ufo_hofx_chan + ufo_obs_bias_chan
-
-                    gsi_hofx_chan = f.variables[f'brightness_temperature_{channel}@GsiHofXBc'][:]
-                    #gsi_hofx_chan = f.variables[f'brightness_temperature_{channel}@GsiHofX'][:]
-                    gsi_qc_flag_chan = f.variables[f'brightness_temperature_{channel}@PreQC'][:]
-                    gsi_error_chan = f.variables[f'brightness_temperature_{channel}@GsiFinalObsError'][:]
-
-                    ### Create QC data ###
-                    ufo_qc_idx = np.where(ufo_qc_flag_chan == 0)
-                    ufo_hofx_qc_chan = ufo_hofx_chan[ufo_qc_idx]
-
-                    # If len of UFO index is 0, GSI is not also 0, so just apply UFO index to GSI data
-                    if len(ufo_qc_idx[0]) == 0:
-                        gsi_hofx_qc_chan = gsi_hofx_chan[ufo_qc_idx]
-
-                    # Using where GSI error is masked as qc
-                    else:
-                        gsi_qc_idx = np.where(gsi_error_chan.mask == False)
-
-                        gsi_hofx_qc_chan = gsi_hofx_chan[gsi_qc_idx]
-
-                    ### Append channel data ###
-                    ufo_hofx_tmp.append(ufo_hofx_chan)
-                    ufo_hofx_qc_tmp.append(ufo_hofx_qc_chan)
-                    gsi_hofx_tmp.append(gsi_hofx_chan)
-                    gsi_hofx_qc_tmp.append(gsi_hofx_qc_chan)
-
-
-            lats.append(lattmp)
-            lons.append(lontmp)
-
-            ufo_hofx.append(ufo_hofx_tmp)
-            ufo_hofx_qc.append(ufo_hofx_qc_tmp)
-            gsi_hofx.append(gsi_hofx_tmp)
-            gsi_hofx_qc.append(gsi_hofx_qc_tmp)
-
-        except:
-            pass
+    for i in channels:
+        columns.append(f'brightness_temperature_{i}@hofx')
+        columns.append(f'brightness_temperature_{i}@EffectiveQC')
+        columns.append(f'brightness_temperature_{i}@ObsBias')
+        columns.append(f'brightness_temperature_{i}@GsiHofXBc')
+        columns.append(f'brightness_temperature_{i}@PreQC')
+        columns.append(f'brightness_temperature_{i}@GsiFinalObsError')
         
-    data_dict = {'lats': lats,
-                 'lons': lons,
-                 'filename': filenames,
-                 'channels': channels,
-                 'cycles': cycles,
-                 'ufo hofx': ufo_hofx,
-                 'ufo hofx qc': ufo_hofx_qc,
-                 'gsi hofx': gsi_hofx,
-                 'gsi hofx qc': gsi_hofx_qc,
-                }
-    
-    return data_dict
-
+    # Create dataframe from appropriate column names and indexing
+    idx = pd.IndexSlice
+    data_df = df.loc[idx[:, 0], columns].reset_index()
+          
+    return data_df
 
 def generate_figs(inpath, outpath):
     
-    data_dict = read_var(inpath)
-    
-    ### Plot Cycles ###
-    for i in range(len(data_dict['cycles'])):
+    obsfiles = glob.glob(inpath+'*')
+    obsfiles.sort()
+
+    for file in obsfiles:
+        # Get channels
+        channels = _get_channels(file)
         
-        sensor = data_dict['filename'][i].split('_')[0]
-        satellite = data_dict['filename'][i].split('_')[1]
-        
+        # Get metadata
+        filename = file.split('/')[-1]
+        sensor = filename.split('_')[0]
+        satellite = filename.split('_')[1]
+        cycle = filename.split('_')[3]
+
         metadata = {'sensor': sensor,
                     'satellite': satellite,
-                    'cycle': data_dict['cycles'][i],
-                    'channels': data_dict['channels'],
-                    'outdir': os.path.join(outpath),
-                   }     
+                    'cycle': cycle,
+                    'channels': channels,
+                    'outdir': './'}
+
+        data_df = get_data_df(file, channels)
         
-        ufo_data = data_dict['ufo hofx'][i]
-        gsi_data = data_dict['gsi hofx'][i]
-        ufo_data_qc = data_dict['ufo hofx qc'][i]
-        gsi_data_qc = data_dict['gsi hofx qc'][i]
+        # Create Dataframe appropriate for plotting data
+        plot_df = pd.DataFrame()
         
-        ### Plot Scatter ###
-        plot_hofx_scatter(ufo_data, gsi_data, metadata,
-                          ufo_data_qc=ufo_data_qc,
-                          gsi_data_qc=gsi_data_qc)
-        
-        ### Plot Histogram ###
-        plot_hofx_histogram(ufo_data, gsi_data, metadata)
-        
-        
-        ### Plot Obs Count ###
+        # Get channel counts for bar graph
         ufo_obs_count = []
         ufo_obs_count_qc = []
         gsi_obs_count = []
         gsi_obs_count_qc = []
-        
-        for j in range(len(data_dict['channels'])):
-            ufo_obs_count.append(len(data_dict['ufo hofx'][i][j]))
-            ufo_obs_count_qc.append(len(data_dict['ufo hofx qc'][i][j]))
-            gsi_obs_count.append(len(data_dict['gsi hofx'][i][j]))
-            gsi_obs_count_qc.append(len(data_dict['gsi hofx qc'][i][j]))
-            
 
+        for i in channels:
+            ufo = data_df[f'brightness_temperature_{i}@hofx'] + data_df[f'brightness_temperature_{i}@ObsBias']
+            gsi = data_df[f'brightness_temperature_{i}@GsiHofXBc']
+
+            qc_df = data_df.loc[data_df[f'brightness_temperature_{i}@EffectiveQC'] == 0]
+
+            qc_ufo = qc_df[f'brightness_temperature_{i}@hofx'] + qc_df[f'brightness_temperature_{i}@ObsBias']
+            qc_gsi = qc_df[f'brightness_temperature_{i}@GsiHofXBc']
+    
+            ufo_obs_count.append(len(ufo))
+            ufo_obs_count_qc.append(len(qc_ufo))
+            gsi_obs_count.append(len(gsi))
+            gsi_obs_count_qc.append(len(qc_gsi))
+            
+            plot_df = plot_df.append(pd.DataFrame({'ufo': ufo, 'gsi': gsi, 'ufo-gsi': ufo-gsi,
+                                                   'qc_ufo': qc_ufo, 'qc_gsi': qc_ufo,
+                                                   'qc_ufo-qc_gsi': qc_ufo-qc_gsi}))
+            
+            
+        plot_scatter(plot_df, metadata)
+        
+        plot_histogram(plot_df, metadata)
+        
         plot_obs_count(ufo_obs_count, ufo_obs_count_qc,
                        gsi_obs_count, gsi_obs_count_qc,
                        metadata)
