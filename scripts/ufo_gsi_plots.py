@@ -75,10 +75,10 @@ def _create_scatter(x=None, y=None, qc_x=None, qc_y=None, \
 
 def plot_scatter(df, metadata):
     
-    ## Plot all H(x) data with qc as EffectiveError = 0 ##
-    left_title = '{sensor} {satellite} - H(x)\nAll Channels - EffectiveError = 0 QC'.format(**metadata)
+    ## Plot all H(x) data with qc as EffectiveQC = 0 ##
+    left_title = '{sensor} {satellite} - H(x)\nAll Channels - EffectiveQC = 0 QC'.format(**metadata)
     date_title = '{cycle}'.format(**metadata)
-    save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_EffectiveError_QC_scatter.png'.format(**metadata)
+    save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
     xlabel = 'UFO H(x)'
     ylabel = 'GSI H(x)'
     
@@ -115,10 +115,10 @@ def plot_scatter(df, metadata):
                     qc_y=df['err_gsi'],
                     plot_attributes=plot_attributes)
     
-    ## Plot Effective Error vs. GsiFinalObsError with qc as EffectiveError = 0 ##
-    left_title = '{sensor} {satellite} - Errors\nAll Channels - EffectiveError = 0 QC'.format(**metadata)
+    ## Plot Effective Error vs. GsiFinalObsError with qc as EffectiveQC = 0 ##
+    left_title = '{sensor} {satellite} - Errors\nAll Channels - EffectiveQC = 0 QC'.format(**metadata)
     date_title = '{cycle}'.format(**metadata)
-    save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_EffectiveError_QC_scatter.png'.format(**metadata)
+    save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
     xlabel = 'UFO Effective Error'
     ylabel = 'GSI Observation Error'
     
@@ -134,7 +134,7 @@ def plot_scatter(df, metadata):
                     qc_y=df['qc_flag_gsi_oberr'],
                     plot_attributes=plot_attributes)
     
-    ## Plot Effective Error vs. GsiFinalObsError with qc as EffectiveError = 0 ##
+    ## Plot Effective Error vs. GsiFinalObsError with qc as GSIObservationError < 1e9 ##
     left_title = '{sensor} {satellite} - Errors\nAll Channels - GSI Observation Error < 1e9 QC'.format(**metadata)
     date_title = '{cycle}'.format(**metadata)
     save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
@@ -302,19 +302,26 @@ def generate_figs(inpath, outpath):
 
             # If the gsi data was assimilated, index by GsiFinalObsError < 1e9
             if gsi_use_flag[i] == 1:
-                
                 error_df = data_df.loc[data_df[f'brightness_temperature_{chan}@GsiFinalObsError'] < 1e9]
-
+                
                 err_ufo = error_df[f'brightness_temperature_{chan}@hofx']
                 err_gsi = error_df[f'brightness_temperature_{chan}@GsiHofXBc']
                 err_ufo_oberr = error_df[f'brightness_temperature_{chan}@EffectiveError']
                 err_gsi_oberr = error_df[f'brightness_temperature_{chan}@GsiFinalObsError']
-
+            
+            # Else replace the columns with NaNs
             else:
-                err_ufo = qc_df[f'brightness_temperature_{chan}@hofx']
-                err_gsi = qc_df[f'brightness_temperature_{chan}@GsiHofXBc']
-                err_ufo_oberr = qc_df[f'brightness_temperature_{chan}@EffectiveError']
-                err_gsi_oberr = qc_df[f'brightness_temperature_{chan}@GsiFinalObsError']
+                cols = [f'brightness_temperature_{chan}@hofx',
+                        f'brightness_temperature_{chan}@GsiHofXBc',
+                        f'brightness_temperature_{chan}@EffectiveError',
+                        f'brightness_temperature_{chan}@GsiFinalObsError']
+                
+                data_df[cols] = np.nan
+                
+                err_ufo = data_df[f'brightness_temperature_{chan}@hofx']
+                err_gsi = data_df[f'brightness_temperature_{chan}@GsiHofXBc']
+                err_ufo_oberr = data_df[f'brightness_temperature_{chan}@EffectiveError']
+                err_gsi_oberr = data_df[f'brightness_temperature_{chan}@GsiFinalObsError']
             
             # .size is more appropriate than len() when using pandas series
             ufo_obs_count.append(ufo.size)
