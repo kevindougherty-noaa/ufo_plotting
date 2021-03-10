@@ -216,7 +216,46 @@ def plot_obs_count(ufo_data, ufo_qc_data,
     ax.set_xticks(x)
     ax.set_xticklabels(metadata['channels'])
     plt.ylabel('Count', fontsize=12)
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', )
+    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    
+    ### Add differences to top of bars ###
+    len_x = len(x)
+    
+    ### Get heights of all data rects ###
+    all_data = []
+    for rect in rects1+rects2:
+        height = rect.get_height()
+        all_data.append(height)
+    
+    # Subtract vals every nth index depending on n channels
+    diffs = []
+    for i, val in enumerate(all_data[0:len_x]):
+        diff = all_data[i] - all_data[i+len_x]
+        diffs.append(diff)
+    
+    # Plot the differences
+    for i, rect in enumerate(rects1): 
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width()/1, height,
+                 '%d' % diffs[i], ha='center', va='bottom')
+        
+    ### Get heights of QC rects ###
+    all_data = []
+    for rect in rects3+rects4:
+        height = rect.get_height()
+        all_data.append(height)
+    
+    # Subtract vals every nth index depending on n channels
+    diffs = []
+    for i, val in enumerate(all_data[0:len_x]):
+        diff = all_data[i] - all_data[i+len_x]
+        diffs.append(diff)
+    
+    # Plot the differences
+    for i, rect in enumerate(rects3): 
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width()/1, height,
+                 '%d' % diffs[i], ha='center', va='bottom')
     
     save_filename = '{cycle}_{sensor}_{satellite}_nobs.png'.format(**metadata)
     
