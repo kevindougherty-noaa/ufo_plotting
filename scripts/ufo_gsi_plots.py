@@ -196,6 +196,35 @@ def plot_histogram(df, metadata):
 def plot_obs_count(ufo_data, ufo_qc_data,
                    gsi_data, gsi_qc_data,
                    metadata):
+    
+    if metadata['satellite'] == 'iasi':
+        # Separated into 15 microns CO2 Channels 1-284, Water Vapor Channels 285-465,
+        # and 4.3 microns CO2 Channels 466-616
+        ufo_data = [np.sum(ufo_data[0:283]), np.sum(ufo_data[284:464]), np.sum(ufo_data[465:-1])]
+        gsi_data = [np.sum(gsi_data[0:283]), np.sum(gsi_data[284:464]), np.sum(gsi_data[465:-1])]
+        
+        ufo_qc_data = [np.sum(ufo_qc_data[0:283]), np.sum(ufo_qc_data[284:464]), np.sum(ufo_qc_data[465:-1])]
+        gsi_qc_data = [np.sum(gsi_qc_data[0:283]), np.sum(gsi_qc_data[284:464]), np.sum(gsi_qc_data[465:-1])]
+        
+        
+    elif metadata['satellite'] == 'cris':
+        # Separated into 15 microns CO2 Channels 1-263, Water Vapor Channels 264-366,
+        # and 4.3 microns CO2 Channels 367-431
+        ufo_data = [np.sum(ufo_data[0:262]), np.sum(ufo_data[263:365]), np.sum(ufo_data[366:-1])]
+        gsi_data = [np.sum(gsi_data[0:262]), np.sum(gsi_data[263:365]), np.sum(gsi_data[366:-1])]
+        
+        ufo_qc_data = [np.sum(ufo_qc_data[0:262]), np.sum(ufo_qc_data[263:365]), np.sum(ufo_qc_data[366:-1])]
+        gsi_qc_data = [np.sum(gsi_qc_data[0:262]), np.sum(gsi_qc_data[263:365]), np.sum(gsi_qc_data[366:-1])]
+        
+    elif metadata['satellite'] == 'airs':
+        # Separated into 15 microns CO2 Channels 1-162, Water Vapor Channels 163-214,
+        # and 4.3 microns CO2 Channels 367-431
+        ufo_data = [np.sum(ufo_data[0:161]), np.sum(ufo_data[162:213]), np.sum(ufo_data[214:-1])]
+        gsi_data = [np.sum(gsi_data[0:161]), np.sum(gsi_data[162:213]), np.sum(gsi_data[214:-1])]
+        
+        ufo_qc_data = [np.sum(ufo_qc_data[0:161]), np.sum(ufo_qc_data[162:213]), np.sum(ufo_qc_data[214:-1])]
+        gsi_qc_data = [np.sum(gsi_qc_data[0:161]), np.sum(gsi_qc_data[162:213]), np.sum(gsi_qc_data[214:-1])]
+        
         
     x = np.arange(len(metadata['channels']))
     width = 0.2
@@ -212,13 +241,20 @@ def plot_obs_count(ufo_data, ufo_qc_data,
               loc='left', fontsize=12)
     plt.title('{cycle}'.format(**metadata), loc='right', fontweight='semibold')
 
-    plt.xlabel('Channel', fontsize=12)
     ax.set_xticks(x)
-    ax.set_xticklabels(metadata['channels'])
-    plt.ylabel('Count', fontsize=12)
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
     
-    ### Add differences to top of bars ###
+    if metadata['satellite'] is in ['iasi', 'cris', 'airs']:
+        plt.xlabel('Window', fontsize=12)
+        ax.set_xticklabels(['15\u03BCm CO\u2082', 'Water Vapor', '4.3\u03BCm CO\u2082'])
+    else:
+        plt.xlabel('Channel', fontsize=12)
+        ax.set_xticklabels(metadata['channels'])
+    
+    plt.ylabel('Count', fontsize=12)
+    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', )
+    
+    save_filename = '{cycle}_{sensor}_{satellite}_nobs.png'.format(**metadata)
+    
     len_x = len(x)
     
     ### Get heights of all data rects ###
@@ -257,13 +293,11 @@ def plot_obs_count(ufo_data, ufo_qc_data,
         plt.text(rect.get_x() + rect.get_width()/1, height,
                  '%d' % diffs[i], ha='center', va='bottom')
     
-    save_filename = '{cycle}_{sensor}_{satellite}_nobs.png'.format(**metadata)
     
     plt.savefig(metadata['outdir']+save_filename, bbox_inches='tight', pad_inches=0.1)
     plt.close('all')    
     
     return
-    
 
 def get_data_df(file, channels):
     
