@@ -8,6 +8,7 @@ import glob
 import os
 from sklearn.linear_model import LinearRegression
 
+
 def _get_linear_regression(data1, data2):
     """
     Inputs:
@@ -73,12 +74,16 @@ def _create_scatter(x=None, y=None, qc_x=None, qc_y=None, \
                 bbox_inches='tight', pad_inches=0.1)
     plt.close('all')
 
-def plot_scatter(df, metadata):
+def plot_scatter(data_df, qc_df, err_df, metadata):
     
     ## Plot all H(x) data with qc as EffectiveQC = 0 ##
     left_title = '{sensor} {satellite} - H(x)\nAll Channels - EffectiveQC = 0 QC'.format(**metadata)
-    date_title = '{cycle}'.format(**metadata)
-    save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
+    if metadata['concatenate']:
+        date_title = '{cycle[0]}-\n{cycle[1]}'.format(**metadata)
+        save_filename = '{cycle[0]}_{cycle[1]}_{sensor}_{satellite}_HofX_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
+    else:
+        date_title = '{cycle}'.format(**metadata)
+        save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
     xlabel = 'UFO H(x)'
     ylabel = 'GSI H(x)'
     
@@ -90,15 +95,19 @@ def plot_scatter(df, metadata):
                        'outdir': metadata['outdir']
                       }
     
-    _create_scatter(x=df['ufo'], y=df['gsi'],
-                    qc_x=df['qc_flag_ufo'],
-                    qc_y=df['qc_flag_gsi'],
+    _create_scatter(x=data_df['ufo'], y=data_df['gsi'],
+                    qc_x=qc_df['qc_flag_ufo'],
+                    qc_y=qc_df['qc_flag_gsi'],
                     plot_attributes=plot_attributes)
     
     ## Plot all H(x) data with qc as GSIObservationError < 1e9 ##
     left_title = '{sensor} {satellite} - H(x)\nAll Channels - GSI Observation Error < 1e9 QC'.format(**metadata)
-    date_title = '{cycle}'.format(**metadata)
-    save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
+    if metadata['concatenate']:
+        date_title = '{cycle[0]}-\n{cycle[1]}'.format(**metadata)
+        save_filename = '{cycle[0]}_{cycle[1]}_{sensor}_{satellite}_HofX_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
+    else:
+        date_title = '{cycle}'.format(**metadata)
+        save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
     xlabel = 'UFO H(x)'
     ylabel = 'GSI H(x)'
     
@@ -110,15 +119,19 @@ def plot_scatter(df, metadata):
                        'outdir': metadata['outdir']
                       }
     
-    _create_scatter(x=df['ufo'], y=df['gsi'],
-                    qc_x=df['err_ufo'],
-                    qc_y=df['err_gsi'],
+    _create_scatter(x=data_df['ufo'], y=data_df['gsi'],
+                    qc_x=err_df['err_ufo'],
+                    qc_y=err_df['err_gsi'],
                     plot_attributes=plot_attributes)
     
     ## Plot Effective Error vs. GsiFinalObsError with qc as EffectiveQC = 0 ##
     left_title = '{sensor} {satellite} - Errors\nAll Channels - EffectiveQC = 0 QC'.format(**metadata)
-    date_title = '{cycle}'.format(**metadata)
-    save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
+    if metadata['concatenate']:
+        date_title = '{cycle[0]}-\n{cycle[1]}'.format(**metadata)
+        save_filename = '{cycle[0]}_{cycle[1]}_{sensor}_{satellite}_Errors_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
+    else:
+        date_title = '{cycle}'.format(**metadata)
+        save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
     xlabel = 'UFO Effective Error'
     ylabel = 'GSI Observation Error'
     
@@ -130,14 +143,18 @@ def plot_scatter(df, metadata):
                        'outdir': metadata['outdir']
                       }
     
-    _create_scatter(qc_x=df['qc_flag_ufo_oberr'],
-                    qc_y=df['qc_flag_gsi_oberr'],
+    _create_scatter(qc_x=qc_df['qc_flag_ufo_oberr'],
+                    qc_y=qc_df['qc_flag_gsi_oberr'],
                     plot_attributes=plot_attributes)
     
     ## Plot Effective Error vs. GsiFinalObsError with qc as GSIObservationError < 1e9 ##
     left_title = '{sensor} {satellite} - Errors\nAll Channels - GSI Observation Error < 1e9 QC'.format(**metadata)
-    date_title = '{cycle}'.format(**metadata)
-    save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
+    if metadata['concatenate']:
+        date_title = '{cycle[0]}-\n{cycle[1]}'.format(**metadata)
+        save_filename = '{cycle[0]}_{cycle[1]}_{sensor}_{satellite}_Errors_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
+    else:
+        date_title = '{cycle}'.format(**metadata)
+        save_filename = '{cycle}_{sensor}_{satellite}_Errors_All_Channels_GsiObsError_QC_scatter.png'.format(**metadata)
     xlabel = 'UFO Effective Error'
     ylabel = 'GSI Observation Error'
     
@@ -149,8 +166,8 @@ def plot_scatter(df, metadata):
                        'outdir': metadata['outdir']
                       }
     
-    _create_scatter(qc_x=df['err_ufo_oberr'],
-                    qc_y=df['err_gsi_oberr'],
+    _create_scatter(qc_x=err_df['err_ufo_oberr'],
+                    qc_y=err_df['err_gsi_oberr'],
                     plot_attributes=plot_attributes)
     
     
@@ -165,7 +182,7 @@ def plot_histogram(df, metadata):
 
     stats = df['ufo-gsi'].describe()
 
-    df['ufo-gsi'].plot.hist(ax=ax, bins=9)
+    df['ufo-gsi'].plot.hist(ax=ax)
 
     # Plots data mean with red line
     ax.axvline(stats[1], color='r',
@@ -180,22 +197,31 @@ def plot_histogram(df, metadata):
                transform=ax.transAxes)
 
     plt.grid(linewidth=0.5, color='gray', linestyle='--')
-    plt.title('{sensor} {satellite} - H(x)\nAll Channels'.format(**metadata),
+    plt.title('{sensor} {satellite} - H(x)\nAll Channels\n'.format(**metadata),
               loc='left', fontsize=12)
-    plt.title('{cycle}'.format(**metadata), loc='right', fontweight='semibold')
     plt.ylabel('Count', fontsize=12)
     plt.xlabel('UFO H(x) - GSI H(x)', fontsize=12)
     
-    save_filename = '{cycle}_{sensor}_{satellite}_All_Channels_histogram.png'.format(**metadata)
+    if metadata['concatenate']:
+        date_title = '{cycle[0]}-\n{cycle[1]}'.format(**metadata)
+        save_filename = '{cycle[0]}_{cycle[1]}_{sensor}_{satellite}_All_Channels_histogram.png'.format(**metadata)
+    else:
+        date_title = '{cycle}'.format(**metadata)
+        save_filename = '{cycle}_{sensor}_{satellite}_HofX_All_Channels_EffectiveQC_scatter.png'.format(**metadata)
+    
+    plt.title(date_title, loc='right', fontweight='semibold')
     
     plt.savefig(metadata['outdir']+save_filename, bbox_inches='tight', pad_inches=0.1)
     plt.close('all')
     
     return
 
-def plot_obs_count(ufo_data, ufo_qc_data,
-                   gsi_data, gsi_qc_data,
-                   metadata):
+def plot_obs_count(count_dict, metadata):
+    
+    ufo_data = count_dict['ufo']
+    gsi_data = count_dict['gsi']
+    ufo_qc_data = count_dict['ufo_qc']
+    gsi_qc_data = count_dict['gsi_qc']
     
     if metadata['satellite'] == 'iasi':
         # Separated into 15 microns CO2 Channels 1-284, Water Vapor Channels 285-465,
@@ -205,7 +231,6 @@ def plot_obs_count(ufo_data, ufo_qc_data,
         
         ufo_qc_data = [np.sum(ufo_qc_data[0:283]), np.sum(ufo_qc_data[284:464]), np.sum(ufo_qc_data[465:-1])]
         gsi_qc_data = [np.sum(gsi_qc_data[0:283]), np.sum(gsi_qc_data[284:464]), np.sum(gsi_qc_data[465:-1])]
-        
         
     elif metadata['satellite'] == 'cris':
         # Separated into 15 microns CO2 Channels 1-263, Water Vapor Channels 264-366,
@@ -239,11 +264,10 @@ def plot_obs_count(ufo_data, ufo_qc_data,
     
     plt.title('{sensor} {satellite} - H(x)'.format(**metadata),
               loc='left', fontsize=12)
-    plt.title('{cycle}'.format(**metadata), loc='right', fontweight='semibold')
 
     ax.set_xticks(x)
     
-    if metadata['satellite'] is in ['iasi', 'cris', 'airs']:
+    if metadata['satellite'] in ['iasi', 'cris', 'airs']:
         plt.xlabel('Window', fontsize=12)
         ax.set_xticklabels(['15\u03BCm CO\u2082', 'Water Vapor', '4.3\u03BCm CO\u2082'])
     else:
@@ -253,7 +277,14 @@ def plot_obs_count(ufo_data, ufo_qc_data,
     plt.ylabel('Count', fontsize=12)
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', )
     
-    save_filename = '{cycle}_{sensor}_{satellite}_nobs.png'.format(**metadata)
+    if metadata['concatenate']:
+        date_title = '{cycle[0]}-\n{cycle[1]}'.format(**metadata)
+        save_filename = '{cycle[0]}_{cycle[1]}_{sensor}_{satellite}_nobs.png'.format(**metadata)
+    else:
+        date_title = '{cycle}'.format(**metadata)
+        save_filename = '{cycle}_{sensor}_{satellite}_nobs.png'.format(**metadata)
+        
+    plt.title(date_title, loc='right', fontweight='semibold')
     
     len_x = len(x)
     
@@ -299,7 +330,7 @@ def plot_obs_count(ufo_data, ufo_qc_data,
     
     return
 
-def get_data_df(file, channels):
+def _create_data_df(file, channels):
     
     ds = xr.open_dataset(file)
     df = ds.to_dataframe()
@@ -324,109 +355,190 @@ def get_data_df(file, channels):
           
     return data_df, gsi_use_flag
 
-def generate_figs(inpath, outpath):
+def _create_plotting_dict(data_df, channels, gsi_use_flag):
+    
+    # Create Dataframe appropriate for plotting data
+    plot_df = pd.DataFrame()
+
+    # Get channel counts for bar graph
+    ufo_obs_count = []
+    ufo_obs_count_qc = []
+    ufo_obs_count_err = []
+    gsi_obs_count = []
+    gsi_obs_count_qc = []
+    gsi_obs_count_err = []
+    
+    data_dict = {'ufo': [],
+                 'gsi': [],
+                 'ufo_oberr': [],
+                 'gsi_oberr': [],
+                 'ufo-gsi': []}
+    
+    qc_dict   = {'qc_flag_ufo': [],
+                 'qc_flag_gsi': [],
+                 'qc_flag_ufo_oberr': [],
+                 'qc_flag_gsi_oberr': [],
+                 'qc_ufo-qc_gsi': []}
+    
+    err_dict  = {'err_ufo': [],
+                 'err_gsi': [],
+                 'err_ufo_oberr': [],
+                 'err_gsi_oberr': [],
+                 'err_ufo-err_gsi': []}
+
+    for i, chan in enumerate(channels):
+        ufo = data_df[f'brightness_temperature_{chan}@hofx']
+        gsi = data_df[f'brightness_temperature_{chan}@GsiHofXBc']
+        ufo_oberr = data_df[f'brightness_temperature_{chan}@EffectiveError']
+        gsi_oberr = data_df[f'brightness_temperature_{chan}@GsiFinalObsError']
+
+        # Index by EffectiveQC = 0
+        qc_df = data_df.loc[(data_df[f'brightness_temperature_{chan}@EffectiveQC'] == 0)]
+
+        qc_flag_ufo = qc_df[f'brightness_temperature_{chan}@hofx']
+        qc_flag_gsi = qc_df[f'brightness_temperature_{chan}@GsiHofXBc']
+        qc_flag_ufo_oberr = qc_df[f'brightness_temperature_{chan}@EffectiveError']
+        qc_flag_gsi_oberr = qc_df[f'brightness_temperature_{chan}@GsiFinalObsError']
+
+        # If the gsi data was assimilated, index by GsiFinalObsError < 1e9
+        if gsi_use_flag[i] == 1:
+            error_df = data_df.loc[data_df[f'brightness_temperature_{chan}@GsiFinalObsError'] < 1e9]
+
+            err_ufo = error_df[f'brightness_temperature_{chan}@hofx']
+            err_gsi = error_df[f'brightness_temperature_{chan}@GsiHofXBc']
+            err_ufo_oberr = error_df[f'brightness_temperature_{chan}@EffectiveError']
+            err_gsi_oberr = error_df[f'brightness_temperature_{chan}@GsiFinalObsError']
+
+        # Else replace the columns with NaNs
+        else:
+            cols = [f'brightness_temperature_{chan}@hofx',
+                    f'brightness_temperature_{chan}@GsiHofXBc',
+                    f'brightness_temperature_{chan}@EffectiveError',
+                    f'brightness_temperature_{chan}@GsiFinalObsError']
+
+            data_df[cols] = np.nan
+
+            err_ufo = data_df[f'brightness_temperature_{chan}@hofx']
+            err_gsi = data_df[f'brightness_temperature_{chan}@GsiHofXBc']
+            err_ufo_oberr = data_df[f'brightness_temperature_{chan}@EffectiveError']
+            err_gsi_oberr = data_df[f'brightness_temperature_{chan}@GsiFinalObsError']
+
+        # .size is more appropriate than len() when using pandas series
+        ufo_obs_count.append(ufo.size)
+        ufo_obs_count_qc.append(qc_flag_ufo.dropna().size)
+        ufo_obs_count_err.append(err_ufo_oberr.dropna().size)
+        gsi_obs_count.append(gsi.size)
+        gsi_obs_count_qc.append(qc_flag_gsi.dropna().size)
+        gsi_obs_count_err.append(err_gsi_oberr.dropna().size)
+
+        data_dict['ufo'].extend(ufo)
+        data_dict['gsi'].extend(gsi)
+        data_dict['ufo_oberr'].extend(ufo_oberr)
+        data_dict['gsi_oberr'].extend(gsi_oberr)
+        ufo_m_gsi = ufo-gsi
+        data_dict['ufo-gsi'].extend(ufo_m_gsi)
+        
+        qc_dict['qc_flag_ufo'].extend(qc_flag_ufo)
+        qc_dict['qc_flag_gsi'].extend(qc_flag_gsi)
+        qc_dict['qc_flag_ufo_oberr'].extend(qc_flag_ufo_oberr)
+        qc_dict['qc_flag_gsi_oberr'].extend(qc_flag_gsi_oberr)
+        qcufo_m_qcgsi = qc_flag_ufo-qc_flag_gsi
+        qc_dict['qc_ufo-qc_gsi'].extend(qcufo_m_qcgsi)
+        
+        err_dict['err_ufo'].extend(err_ufo)
+        err_dict['err_gsi'].extend(err_gsi)
+        err_dict['err_ufo_oberr'].extend(err_ufo_oberr)
+        err_dict['err_gsi_oberr'].extend(err_gsi_oberr)
+        errufo_m_errgsi = err_ufo-err_gsi
+        err_dict['err_ufo-err_gsi'].extend(errufo_m_errgsi)
+
+    
+    count_dict = {'ufo': ufo_obs_count,
+                  'ufo_qc': ufo_obs_count_qc,
+                  'ufo_err': ufo_obs_count_err,
+                  'gsi': gsi_obs_count,
+                  'gsi_qc': gsi_obs_count_qc,
+                  'gsi_err': gsi_obs_count_err}
+    
+    plot_data_df = pd.DataFrame.from_dict(data_dict)
+    plot_qc_df = pd.DataFrame.from_dict(qc_dict)
+    plot_err_df = pd.DataFrame.from_dict(err_dict)
+    
+    return plot_data_df, plot_qc_df, plot_err_df, count_dict
+
+
+def generate_figs(inpath, outpath, concatenate=False):
     
     obsfiles = glob.glob(inpath+'*')
     obsfiles.sort()
-
-    for file in obsfiles:
-        # Get channels
-        channels = _get_channels(file)
+    
+    if concatenate:
         
-        # Get metadata
-        filename = file.split('/')[-1]
+        # Metadata
+        print('Extracting metadata ...')
+        metadata_file = obsfiles[0]
+        
+        # Get channels from metadata file
+        channels = _get_channels(metadata_file)
+        
+        filename = metadata_file.split('/')[-1]
         sensor = filename.split('_')[0]
         satellite = filename.split('_')[1]
-        cycle = filename.split('_')[3]
+        
+        # Get first and last file cycle
+        s_cycle = filename.split('_')[3]
+        
+        end_file = obsfiles[-1]
+        e_filename = end_file.split('/')[-1]
+        e_cycle = e_filename.split('_')[3]
+        
 
         metadata = {'sensor': sensor,
                     'satellite': satellite,
-                    'cycle': cycle,
+                    'cycle': [s_cycle, e_cycle],
                     'channels': channels,
+                    'concatenate': True,
                     'outdir': outpath}
-
-        data_df, gsi_use_flag = get_data_df(file, channels)
         
-        # Create Dataframe appropriate for plotting data
-        plot_df = pd.DataFrame()
+        print('Concatenating file ...')
+        dfs = []
+        for file in obsfiles:
+            df, gsi_use_flag = _create_data_df(file, channels)
+            dfs.append(df)
+        data_df = pd.concat(dfs)
         
-        # Get channel counts for bar graph
-        ufo_obs_count = []
-        ufo_obs_count_qc = []
-        ufo_obs_count_err = []
-        gsi_obs_count = []
-        gsi_obs_count_qc = []
-        gsi_obs_count_err = []
+        print('Creating plot dataframe ...')
+        plot_data_df, plot_qc_df, plot_err_df, count_dict = _create_plotting_dict(data_df, channels, gsi_use_flag)
         
-
-        for i, chan in enumerate(channels):
-            ufo = data_df[f'brightness_temperature_{chan}@hofx']
-            gsi = data_df[f'brightness_temperature_{chan}@GsiHofXBc']
-            ufo_oberr = data_df[f'brightness_temperature_{chan}@EffectiveError']
-            gsi_oberr = data_df[f'brightness_temperature_{chan}@GsiFinalObsError']
+        print('Plotting ...')
+        plot_scatter(plot_data_df, plot_qc_df, plot_err_df, metadata)
+        plot_histogram(plot_data_df, metadata)
+        plot_obs_count(count_dict, metadata)
             
-            # Index by EffectiveQC = 0
-            qc_df = data_df.loc[(data_df[f'brightness_temperature_{chan}@EffectiveQC'] == 0)]
-
-            qc_flag_ufo = qc_df[f'brightness_temperature_{chan}@hofx']
-            qc_flag_gsi = qc_df[f'brightness_temperature_{chan}@GsiHofXBc']
-            qc_flag_ufo_oberr = qc_df[f'brightness_temperature_{chan}@EffectiveError']
-            qc_flag_gsi_oberr = qc_df[f'brightness_temperature_{chan}@GsiFinalObsError']
-
-            # If the gsi data was assimilated, index by GsiFinalObsError < 1e9
-            if gsi_use_flag[i] == 1:
-                error_df = data_df.loc[data_df[f'brightness_temperature_{chan}@GsiFinalObsError'] < 1e9]
-                
-                err_ufo = error_df[f'brightness_temperature_{chan}@hofx']
-                err_gsi = error_df[f'brightness_temperature_{chan}@GsiHofXBc']
-                err_ufo_oberr = error_df[f'brightness_temperature_{chan}@EffectiveError']
-                err_gsi_oberr = error_df[f'brightness_temperature_{chan}@GsiFinalObsError']
-            
-            # Else replace the columns with NaNs
-            else:
-                cols = [f'brightness_temperature_{chan}@hofx',
-                        f'brightness_temperature_{chan}@GsiHofXBc',
-                        f'brightness_temperature_{chan}@EffectiveError',
-                        f'brightness_temperature_{chan}@GsiFinalObsError']
-                
-                data_df[cols] = np.nan
-                
-                err_ufo = data_df[f'brightness_temperature_{chan}@hofx']
-                err_gsi = data_df[f'brightness_temperature_{chan}@GsiHofXBc']
-                err_ufo_oberr = data_df[f'brightness_temperature_{chan}@EffectiveError']
-                err_gsi_oberr = data_df[f'brightness_temperature_{chan}@GsiFinalObsError']
-            
-            # .size is more appropriate than len() when using pandas series
-            ufo_obs_count.append(ufo.size)
-            ufo_obs_count_qc.append(qc_flag_ufo.dropna().size)
-            ufo_obs_count_err.append(err_ufo_oberr.dropna().size)
-            gsi_obs_count.append(gsi.size)
-            gsi_obs_count_qc.append(qc_flag_gsi.dropna().size)
-            gsi_obs_count_err.append(err_gsi_oberr.dropna().size)
-            
-
-            plot_df = plot_df.append(pd.DataFrame({'ufo': ufo,
-                                                   'gsi': gsi,
-                                                   'ufo_oberr': ufo_oberr,
-                                                   'gsi_oberr': gsi_oberr,
-                                                   'qc_flag_ufo': qc_flag_ufo,
-                                                   'qc_flag_gsi': qc_flag_ufo,
-                                                   'qc_flag_ufo_oberr': qc_flag_ufo_oberr,
-                                                   'qc_flag_gsi_oberr': qc_flag_gsi_oberr,
-                                                   'err_ufo': err_ufo, 'err_gsi': err_gsi,
-                                                   'err_ufo_oberr': err_ufo_oberr,
-                                                   'err_gsi_oberr': err_gsi_oberr,
-                                                   'ufo-gsi': ufo-gsi,
-                                                   'qc_ufo-qc_gsi': qc_flag_ufo-qc_flag_gsi}))
-            
-            
-        plot_scatter(plot_df, metadata)
         
-        plot_histogram(plot_df, metadata)
+    else:
+        for file in obsfiles:
+            channels = _get_channels(file)
+
+            filename = file.split('/')[-1]
+            sensor = filename.split('_')[0]
+            satellite = filename.split('_')[1]
+            cycle = filename.split('_')[3]
+
+            metadata = {'sensor': sensor,
+                        'satellite': satellite,
+                        'cycle': cycle,
+                        'channels': channels,
+                        'concatenate': concatenate,
+                        'outdir': outpath}
         
-        plot_obs_count(ufo_obs_count, ufo_obs_count_qc,
-                       gsi_obs_count, gsi_obs_count_qc,
-                       metadata)
+            data_df, gsi_use_flag = _create_data_df(file, channels)
+        
+            plot_data_df, plot_qc_df, plot_err_df, count_dict = _create_plotting_dict(data_df, channels, gsi_use_flag)
+
+            plot_scatter(plot_data_df, plot_qc_df, plot_err_df, metadata)
+            plot_histogram(plot_data_df, metadata)
+            plot_obs_count(count_dict, metadata)
         
         
 
@@ -434,5 +546,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument('-d', '--diagdir', help='path to UFO netCDF diags', required=True)
     ap.add_argument('-o', '--output', help="path to output directory", default="./")
+    ap.add_argument('-c', '--concatenate', help="True if all files calculated together.", default=False)
     MyArgs = ap.parse_args()
-    generate_figs(MyArgs.diagdir, MyArgs.output)
+    generate_figs(MyArgs.diagdir, MyArgs.output, MyArgs.concatenate)
