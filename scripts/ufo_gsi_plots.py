@@ -469,7 +469,7 @@ def _create_plotting_dict(data_df, channels, gsi_use_flag):
 
 def generate_figs(inpath, outpath, concatenate=False):
     
-    obsfiles = glob.glob(inpath+'*')
+    obsfiles = glob.glob(inpath+'*output.nc4')
     obsfiles.sort()
     
     if concatenate:
@@ -539,7 +539,6 @@ def generate_figs(inpath, outpath, concatenate=False):
             plot_scatter(plot_data_df, plot_qc_df, plot_err_df, metadata)
             plot_histogram(plot_data_df, metadata)
             plot_obs_count(count_dict, metadata)
-        
         
 
 if __name__ == "__main__":
