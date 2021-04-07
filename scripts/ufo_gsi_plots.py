@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import glob
 import os
 from sklearn.linear_model import LinearRegression
+import matplotlib
+matplotlib.use('agg')
 
 
 def _get_linear_regression(data1, data2):
@@ -54,12 +56,14 @@ def _create_scatter(x=None, y=None, qc_x=None, qc_y=None, \
         label = f'Estimated Regression line\ny = {slope:.4f}x + {intercept:.4f}\nR\u00b2 : {r_sq:.4f}'
         plt.plot(x, y_pred, color='blue', linewidth=1, label=label)
     
+    
+    
     # Plot QC data and Regression line
-    plt.scatter(qc_x, qc_y, s=15, color='dimgrey', label= f'QC Data: n={qc_x.dropna().size}')
+    plt.scatter(qc_x, qc_y, s=15, color='dimgrey', label= f'QC Data: n={qc_x.size}')
 
-    y_pred, r_sq, intercept, slope = _get_linear_regression(qc_x.dropna(), qc_y.dropna())
+    y_pred, r_sq, intercept, slope = _get_linear_regression(qc_x, qc_y)
     label = f'Estimated Regression line - QC\ny = {slope:.4f}x + {intercept:.4f}\nR\u00b2 : {r_sq:.4f}'
-    plt.plot(qc_x.dropna(), y_pred, color='red', linewidth=1, label=label)
+    plt.plot(qc_x, y_pred, color='red', linewidth=1, label=label)
 
     plt.legend(loc='upper left', fontsize=11)
 
@@ -464,7 +468,7 @@ def _create_plotting_dict(data_df, channels, gsi_use_flag):
     plot_qc_df = pd.DataFrame.from_dict(qc_dict)
     plot_err_df = pd.DataFrame.from_dict(err_dict)
     
-    return plot_data_df, plot_qc_df, plot_err_df, count_dict
+    return plot_data_df.dropna(), plot_qc_df.dropna(), plot_err_df.dropna(), count_dict
 
 
 def generate_figs(inpath, outpath, concatenate=False):
@@ -509,6 +513,11 @@ def generate_figs(inpath, outpath, concatenate=False):
         
         print('Creating plot dataframe ...')
         plot_data_df, plot_qc_df, plot_err_df, count_dict = _create_plotting_dict(data_df, channels, gsi_use_flag)
+        
+        if plot_qc_df['qc_flag_gsi_oberr'].max() > 1e30:
+            x = np.array(plot_qc_df['qc_flag_gsi_oberr'].values.tolist())
+            plot_qc_df['qc_flag_gsi_oberr'] = np.where(x > 1e30, np.nan, x).tolist()
+            plot_qc_df = plot_qc_df.dropna()
         
         print('Plotting ...')
         plot_scatter(plot_data_df, plot_qc_df, plot_err_df, metadata)
