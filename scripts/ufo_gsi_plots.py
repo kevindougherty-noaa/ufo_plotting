@@ -381,7 +381,7 @@ def create_dataframes(obsfiles):
     ## Process and filter data ##
     print('Filtering data ...')
     # Find channels that are not used (gsi_use_flag == -1)
-    badchans = metadatadf['variable_names@VarMetaData'][0][metadatadf['gsi_use_flag@VarMetaData'][0] != 1].str.decode('utf-8').to_list()
+    badchans = metadatadf['variable_names@VarMetaData'][0][metadatadf['gsi_use_flag@VarMetaData'][0] != 1].str.decode('utf-8').tolist()
     badchans = [x.strip() for x in badchans]
     
     # Replace large values and bad channels with NaNs
