@@ -477,7 +477,7 @@ def generate_figs(inpath, outpath, concatenate):
                     'qc_ufo_count': [],
                     'qc_gsi_count': []}
 
-        channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').to_list()
+        channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').tolist()
 
         for chan in channels:
             chan = chan.strip()
