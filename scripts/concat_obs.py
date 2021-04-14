@@ -2,7 +2,7 @@ import argparse
 import xarray as xr
 
 def concat_nc(infiles, outfile):
-    ds = xr.open_mfdataset(infiles+'*', concat_dim="nlocs")
+    ds = xr.open_mfdataset(infiles+'*', concat_dim="nlocs", lock=False)
     ds.to_netcdf(outfile)
 
 if __name__ == "__main__":
