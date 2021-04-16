@@ -1,9 +1,13 @@
+#!/usr/bin/env python
+
 import argparse
 import xarray as xr
 import numpy as np
 import pandas as pd
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('agg')
 from matplotlib import rcParams, ticker
 import glob
 import os
@@ -248,7 +252,7 @@ def plot_obscount(count_dict, metadata):
     ufo_qc_data = count_dict['qc_ufo_count']
     gsi_qc_data = count_dict['qc_gsi_count']
 
-    if metadata['satellite'] == 'iasi':
+    if metadata['sensor'] == 'iasi':
         # Separated into 15 microns CO2 Channels 1-284, Water Vapor Channels 285-465,
         # and 4.3 microns CO2 Channels 466-616
         ufo_data = [np.sum(ufo_data[0:283]), np.sum(ufo_data[284:464]), np.sum(ufo_data[465:-1])]
@@ -256,8 +260,9 @@ def plot_obscount(count_dict, metadata):
 
         ufo_qc_data = [np.sum(ufo_qc_data[0:283]), np.sum(ufo_qc_data[284:464]), np.sum(ufo_qc_data[465:-1])]
         gsi_qc_data = [np.sum(gsi_qc_data[0:283]), np.sum(gsi_qc_data[284:464]), np.sum(gsi_qc_data[465:-1])]
-
-    elif metadata['satellite'] == 'cris':
+        x = np.array([x+1 for x in np.arange(len(ufo_data))])
+        
+    elif metadata['sensor'] == 'cris':
         # Separated into 15 microns CO2 Channels 1-263, Water Vapor Channels 264-366,
         # and 4.3 microns CO2 Channels 367-431
         ufo_data = [np.sum(ufo_data[0:262]), np.sum(ufo_data[263:365]), np.sum(ufo_data[366:-1])]
@@ -265,8 +270,9 @@ def plot_obscount(count_dict, metadata):
 
         ufo_qc_data = [np.sum(ufo_qc_data[0:262]), np.sum(ufo_qc_data[263:365]), np.sum(ufo_qc_data[366:-1])]
         gsi_qc_data = [np.sum(gsi_qc_data[0:262]), np.sum(gsi_qc_data[263:365]), np.sum(gsi_qc_data[366:-1])]
-
-    elif metadata['satellite'] == 'airs':
+        x = np.array([x+1 for x in np.arange(len(ufo_data))])
+        
+    elif metadata['sensor'] == 'airs':
         # Separated into 15 microns CO2 Channels 1-162, Water Vapor Channels 163-214,
         # and 4.3 microns CO2 Channels 367-431
         ufo_data = [np.sum(ufo_data[0:161]), np.sum(ufo_data[162:213]), np.sum(ufo_data[214:-1])]
@@ -274,9 +280,11 @@ def plot_obscount(count_dict, metadata):
 
         ufo_qc_data = [np.sum(ufo_qc_data[0:161]), np.sum(ufo_qc_data[162:213]), np.sum(ufo_qc_data[214:-1])]
         gsi_qc_data = [np.sum(gsi_qc_data[0:161]), np.sum(gsi_qc_data[162:213]), np.sum(gsi_qc_data[214:-1])]
-
-
-    x = np.array([x+1 for x in np.arange(len(count_dict['ufo_count']))])
+        x = np.array([x+1 for x in np.arange(len(ufo_data))])
+    
+    else:
+        x = np.array([x+1 for x in np.arange(len(count_dict['ufo_count']))])
+    
     width = 0.2
 
     fig, ax = plt.subplots(figsize=(15,5))
@@ -289,7 +297,7 @@ def plot_obscount(count_dict, metadata):
 
     ax.set_xticks(x)
 
-    if metadata['satellite'] in ['iasi', 'cris', 'airs']:
+    if metadata['sensor'] in ['iasi', 'cris', 'airs']:
         plt.xlabel('Window', fontsize=12)
         ax.set_xticklabels(['15\u03BCm CO\u2082', 'Water Vapor', '4.3\u03BCm CO\u2082'])
     else:
@@ -352,36 +360,52 @@ def plot_obscount(count_dict, metadata):
     return
 
 
-def create_dataframes(obsfiles):
-    datadf = pd.DataFrame([])
-    for file in obsfiles:
-        _str_cycle = os.path.basename(file).split('_')[3]
-        cycle = datetime.strptime(_str_cycle, '%Y%m%d%H')
-        
-        # read into xarray
-        with xr.open_dataset(file) as data:
-            # load all data from the transformed dataset
-            # to ensure we can use it after closing each original file
-            data.load()
-            
-        validvars = [var for var in list(data.keys()) if var.endswith(('@hofx', '@EffectiveQC',
-                                                                       '@EffectiveError', '@ObsBias',
-                                                                       '@GsiHofXBc', '@PreQC',
-                                                                       '@GsiFinalObsError'))]
+def _read_data(file):
+    # read into xarray
+    with xr.open_dataset(file) as data:
+        # load all data from the transformed dataset
+        # to ensure we can use it after closing each original file
+        data.load()
+
+    validvars = [var for var in list(data.keys()) if var.endswith(('@hofx', '@EffectiveQC',
+                                                                   '@EffectiveError', '@ObsBias',
+                                                                   '@GsiHofXBc', '@PreQC',
+                                                                   '@GsiFinalObsError'))]
+
+    df = data[validvars].to_dataframe()
+
+    if df.shape[0] > 0:
+        return df
+    else:
+        return
+
+def _metadata_df(file):
     
-        df = data[validvars].to_dataframe()
-        
-        if df.shape[0] > 0:
-            df['cycle'] = cycle
-            datadf = datadf.append(df)
-            
+    with xr.open_dataset(file) as data:
+        # load all data from the transformed dataset
+        # to ensure we can use it after closing each original file
+        data.load()
+    
     metavars = [var for var in list(data.keys()) if var.endswith(('@VarMetaData'))]
     metadatadf = data[metavars].to_dataframe()
     
-    ## Process and filter data ##
-    print('Filtering data ...')
+    return metadatadf
+
+def create_dataframes(obsfiles, concatenate):
+    
+    if concatenate == True:
+        dfs = [_read_data(file) for file in obsfiles]
+
+        datadf = pd.concat(dfs)
+        metadatadf = _metadata_df(obsfiles[0])
+
+    else:
+        datadf = _read_data(obsfiles)
+        metadatadf = _metadata_df(obsfiles)
+    
+    
     # Find channels that are not used (gsi_use_flag == -1)
-    badchans = metadatadf['variable_names@VarMetaData'][0][metadatadf['gsi_use_flag@VarMetaData'][0] != 1].str.decode('utf-8').tolist()
+    badchans = metadatadf['variable_names@VarMetaData'][0][metadatadf['gsi_use_flag@VarMetaData'][0] != 1].str.decode('utf-8').to_list()
     badchans = [x.strip() for x in badchans]
     
     # Replace large values and bad channels with NaNs
@@ -397,10 +421,10 @@ def create_dataframes(obsfiles):
     qccols = [var for var in datadf.columns if var.endswith(('@EffectiveQC'))]
     for col in qccols:
         datadf.loc[datadf[col] != 0, col] = float("NaN")
-    
+        
     return datadf, metadatadf
 
-def get_metadata(obsfiles, outpath, concatenate):
+def get_metadata_concat(obsfiles, outpath):
     
     filename = obsfiles[0].split('/')[-1]
     sensor = filename.split('_')[0]
@@ -409,87 +433,101 @@ def get_metadata(obsfiles, outpath, concatenate):
     # Get first and last file cycle
     s_cycle = filename.split('_')[3]
 
-    if concatenate:
-        end_file = obsfiles[-1]
-        e_filename = end_file.split('/')[-1]
-        e_cycle = e_filename.split('_')[3]
+    end_file = obsfiles[-1]
+    e_filename = end_file.split('/')[-1]
+    e_cycle = e_filename.split('_')[3]
 
 
-        metadata = {'sensor': sensor,
-                    'satellite': satellite,
-                    'cycle': [s_cycle, e_cycle],
-                    'concatenate': True,
-                    'outdir': outpath}
-    else:
-        metadata = {'sensor': sensor,
-                    'satellite': satellite,
-                    'cycle': s_cycle,
-                    'concatenate': False,
-                    'outdir': outpath}
+    metadata = {'sensor': sensor,
+                'satellite': satellite,
+                'cycle': [s_cycle, e_cycle],
+                'concatenate': True,
+                'outdir': outpath}
         
     return metadata
 
-
-def generate_figs(inpath, outpath, concatenate):
+def get_metadata(file, outpath):
     
-    # Get files
-    print('Fetching Files ...')
-    obsfiles = glob.glob(inpath+'*output.nc4')
-    obsfiles.sort()
+    filename = file.split('/')[-1]
+    sensor = filename.split('_')[0]
+    satellite = filename.split('_')[1]
 
-    print('Grabbing metadata ...')
-    metadata = get_metadata(obsfiles, outpath, concatenate)
+    # Get first and last file cycle
+    cycle = filename.split('_')[3]
 
-    # just working on concatenation right now
-    if concatenate:
-        print('Concatenating and creating dataframes ...')
-        datadf, metadatadf = create_dataframes(obsfiles)
 
-        ## Create Plotting dataframe ##
-        columns = ['hofx', 'EffectiveQC','EffectiveError', 'ObsBias','GsiHofXBc', 'PreQC','GsiFinalObsError']
-        plot_df = pd.DataFrame(columns=columns)
-
-        validvars = [var for var in list(datadf.keys()) if var.endswith(('@hofx', '@EffectiveQC',
-                                                                        '@EffectiveError', '@ObsBias',
-                                                                        '@GsiHofXBc', '@PreQC',
-                                                                        '@GsiFinalObsError'))]
-
-        plot_dict = {'hofx': [], 'EffectiveQC': [],'EffectiveError': [], 'ObsBias': [],'GsiHofXBc': [], 'PreQC': [],'GsiFinalObsError': []}
-
-        for col in validvars:
-            var = col.split('@')[-1]
-            plot_dict[var].extend(datadf[col])
-
-        plot_df = pd.DataFrame.from_dict(plot_dict)
-        plot_df['ufo-gsi'] = plot_df['hofx']-plot_df['GsiHofXBc']
-
-        ## Plot Scatter and histogram ##
-        print('Plotting ...')
-        plot_scatter(plot_df, metadata)
-        plot_histogram(plot_df, metadata)
-
-        ## Obs count plot ##
-        countcols = [var for var in list(datadf.keys()) if var.endswith(('@hofx', '@EffectiveQC', '@GsiHofXBc'))]
-        countdf = datadf[countcols]
-
-        count_dict={'ufo_count': [],
-                    'gsi_count': [],
-                    'qc_ufo_count': [],
-                    'qc_gsi_count': []}
-
-        channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').tolist()
-
-        for chan in channels:
-            chan = chan.strip()
-            count_dict['ufo_count'].append(countdf[chan+'@hofx'].count())
-            count_dict['gsi_count'].append(countdf[chan+'@GsiHofXBc'].count())
-
-            qctmp = countdf[countdf[chan+'@EffectiveQC'].notnull()]
-            count_dict['qc_ufo_count'].append(qctmp[chan+'@hofx'].count())
-            count_dict['qc_gsi_count'].append(qctmp[chan+'@GsiHofXBc'].count())
-
-        plot_obscount(count_dict, metadata)
+    metadata = {'sensor': sensor,
+                'satellite': satellite,
+                'cycle': cycle,
+                'concatenate': False,
+                'outdir': outpath}
         
+    return metadata
+
+def generate_figs(datadf, metadatadf, metadata):
+    
+    ## Create Plotting dataframe ##
+    columns = ['hofx', 'EffectiveQC','EffectiveError', 'ObsBias','GsiHofXBc', 'PreQC','GsiFinalObsError']
+    plot_df = pd.DataFrame(columns=columns)
+
+    validvars = [var for var in list(datadf.keys()) if var.endswith(('@hofx', '@EffectiveQC',
+                                                                    '@EffectiveError', '@ObsBias',
+                                                                    '@GsiHofXBc', '@PreQC',
+                                                                    '@GsiFinalObsError'))]
+
+    plot_dict = {'hofx': [], 'EffectiveQC': [],'EffectiveError': [], 'ObsBias': [],'GsiHofXBc': [], 'PreQC': [],'GsiFinalObsError': []}
+
+    for col in validvars:
+        var = col.split('@')[-1]
+        plot_dict[var].extend(datadf[col])
+
+    plot_df = pd.DataFrame.from_dict(plot_dict)
+    plot_df['ufo-gsi'] = plot_df['hofx']-plot_df['GsiHofXBc']
+
+    ## Plot Scatter and histogram ##
+    plot_scatter(plot_df, metadata)
+    plot_histogram(plot_df, metadata)
+
+    ## Obs count plot ##
+    countcols = [var for var in list(datadf.keys()) if var.endswith(('@hofx', '@EffectiveQC', '@GsiHofXBc'))]
+    countdf = datadf[countcols]
+
+    count_dict={'ufo_count': [],
+                'gsi_count': [],
+                'qc_ufo_count': [],
+                'qc_gsi_count': []}
+
+    channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').to_list()
+
+    for chan in channels:
+        chan = chan.strip()
+        count_dict['ufo_count'].append(countdf[chan+'@hofx'].count())
+        count_dict['gsi_count'].append(countdf[chan+'@GsiHofXBc'].count())
+
+        qctmp = countdf[countdf[chan+'@EffectiveQC'].notnull()]
+        count_dict['qc_ufo_count'].append(qctmp[chan+'@hofx'].count())
+        count_dict['qc_gsi_count'].append(qctmp[chan+'@GsiHofXBc'].count())
+
+    plot_obscount(count_dict, metadata)
+    
+    return
+
+def main(input_data):
+    
+    file = input_data['file']
+    outpath = input_data['outpath']
+    concatenate = input_data['concatenate']
+    
+    if concatenate:
+        metadata = get_metadata_concat(file, outpath)
+        datadf, metadatadf = create_dataframes(file, concatenate)
+        generate_figs(datadf, metadatadf, metadata)
+        
+    else:
+        metadata = get_metadata(file, outpath)
+        datadf, metadatadf = create_dataframes(file, concatenate)
+        generate_figs(datadf, metadatadf, metadata)
+    
     return
     
 if __name__ == "__main__":
@@ -499,5 +537,22 @@ if __name__ == "__main__":
     ap.add_argument('-c', '--concatenate', help="True if all files calculated together.", default=False)
     MyArgs = ap.parse_args()
     
-    generate_figs(MyArgs.diagdir, MyArgs.output, MyArgs.concatenate)
-    print('done')    
+    if MyArgs.concatenate == 'True':
+        MyArgs.concatenate = True
+    else:
+        MyArgs.concatenate = False
+    
+    obsfiles = glob.glob(MyArgs.diagdir+'*output.nc4')
+    obsfiles.sort()
+    
+    if MyArgs.concatenate:
+        print('Concatenating files and plotting ...')
+        d = {'file': obsfiles, 'outpath': MyArgs.output, 'concatenate': MyArgs.concatenate}
+        main(d)
+    else:
+        for file in obsfiles:
+            print('Plotting file: ', file.split('/')[-1])
+            d = {'file': file, 'outpath': MyArgs.output, 'concatenate': MyArgs.concatenate}
+            main(d)
+            
+    print('Finished')    
