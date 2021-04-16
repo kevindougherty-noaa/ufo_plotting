@@ -489,7 +489,7 @@ def generate_figs(datadf, metadatadf, metadata):
     plot_histogram(plot_df, metadata)
 
     ## Obs count plot ##
-    countcols = [var for var in list(datadf.keys()) if var.endswith(('@hofx', '@EffectiveQC', '@GsiHofXBc'))]
+    countcols = [var for var in list(datadf.keys()) if var.endswith(('@hofx', '@EffectiveQC', '@GsiFinalObsError', '@GsiHofXBc'))]
     countdf = datadf[countcols]
 
     count_dict={'ufo_count': [],
@@ -497,16 +497,15 @@ def generate_figs(datadf, metadatadf, metadata):
                 'qc_ufo_count': [],
                 'qc_gsi_count': []}
 
-    channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').tolist()
+    channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').to_list()
 
     for chan in channels:
         chan = chan.strip()
         count_dict['ufo_count'].append(countdf[chan+'@hofx'].count())
         count_dict['gsi_count'].append(countdf[chan+'@GsiHofXBc'].count())
 
-        qctmp = countdf[countdf[chan+'@EffectiveQC'].notnull()]
-        count_dict['qc_ufo_count'].append(qctmp[chan+'@hofx'].count())
-        count_dict['qc_gsi_count'].append(qctmp[chan+'@GsiHofXBc'].count())
+        count_dict['qc_ufo_count'].append(countdf[chan+'@EffectiveQC'].count())
+        count_dict['qc_gsi_count'].append(countdf[chan+'@GsiFinalObsError'].count())
 
     plot_obscount(count_dict, metadata)
     
