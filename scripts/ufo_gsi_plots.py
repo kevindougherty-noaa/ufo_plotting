@@ -405,7 +405,7 @@ def create_dataframes(obsfiles, concatenate):
     
     
     # Find channels that are not used (gsi_use_flag == -1)
-    badchans = metadatadf['variable_names@VarMetaData'][0][metadatadf['gsi_use_flag@VarMetaData'][0] != 1].str.decode('utf-8').to_list()
+    badchans = metadatadf['variable_names@VarMetaData'][0][metadatadf['gsi_use_flag@VarMetaData'][0] != 1].str.decode('utf-8').tolist()
     badchans = [x.strip() for x in badchans]
     
     # Replace large values and bad channels with NaNs
@@ -497,7 +497,7 @@ def generate_figs(datadf, metadatadf, metadata):
                 'qc_ufo_count': [],
                 'qc_gsi_count': []}
 
-    channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').to_list()
+    channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').tolist()
 
     for chan in channels:
         chan = chan.strip()
