@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH -J test
 #SBATCH -A da-cpu
-#SBATCH -q batch 
+#SBATCH -q batch
+#SBATCH --partition=bigmem
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=40
 #SBATCH -t 00:45:00
@@ -10,7 +11,7 @@
 module use -a /scratch2/NCEPDEV/marineda/Jong.Kim/save/modulefiles/
 module load anaconda/3.15.1
 
-filepath=/scratch2/NCEPDEV/stmp1/Emily.Liu/data_aop20_global/scripts/OutData/IASI/iasi_metop-a/
+filepath=/scratch2/NCEPDEV/stmp1/Emily.Liu/data_aop20_global/scripts/OutData/IASI/iasi_metop-b/
 OUTDIR=./
 
 for file in $(ls ${filepath}*output.nc4) ; do
