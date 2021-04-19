@@ -414,7 +414,7 @@ def create_dataframes(obsfiles, concatenate):
                                                                  '@EffectiveQC', '@GsiFinalObsError'))]
     for col in filtercols:
         datadf.loc[datadf[col] > 1e10, col] = float("NaN")
-        if col.startswith(tuple(badchans)):
+        if col.split('@')[0] in badchans:
             datadf[col] = float("NaN")
 
     # replace where Effective qc is not 0 with NaNs
@@ -498,9 +498,9 @@ def generate_figs(datadf, metadatadf, metadata):
                 'qc_gsi_count': []}
 
     channels = metadatadf['variable_names@VarMetaData'][0].str.decode('utf-8').to_list()
-
+    channels = [chan.strip() for chan in channels]
+    
     for chan in channels:
-        chan = chan.strip()
         count_dict['ufo_count'].append(countdf[chan+'@hofx'].count())
         count_dict['gsi_count'].append(countdf[chan+'@GsiHofXBc'].count())
 
